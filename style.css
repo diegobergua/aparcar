@@ -1,0 +1,215 @@
+* {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 600px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Parte superior (mapa) */
+    .app__top {
+      flex: 2;
+      min-height: 40vh;
+      border-bottom: 1px solid #ddd;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    /* Parte central (botón) */
+    .app__middle {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #fafafa;
+    }
+
+    #saveBtn, #recenterBtn {
+      padding: 12px 16px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+    }
+    
+    #saveBtn {
+      background: #007bff;
+      color: white;
+    }
+
+    #recenterBtn {
+        background-color: #28a745;
+        color: white;
+        margin-top: 8px;
+    }
+
+    #saveBtn:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .message {
+      font-size: 13px;
+      margin: 0;
+      min-height: 1.2em;
+    }
+
+    .message--error {
+      color: #b00020;
+    }
+
+    .message--info {
+      color: #006400;
+    }
+
+    /* Parte inferior (histórico) */
+    .app__bottom {
+      flex: 1;
+      padding: 10px 14px;
+      overflow-y: auto;
+      background: #fff;
+    }
+
+    .app__bottom h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    #locationsList {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .location-item {
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: #fafafa;
+    }
+
+    .location-item:hover {
+      background: #f0f0f0;
+    }
+
+    .location-item__title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .location-item__meta {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .tag {
+      padding: 2px 6px;
+      font-size: 10px;
+      border-radius: 999px;
+      border: 1px solid #007bff;
+      color: #007bff;
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+
+    .location-item--active {
+      border-color: #007bff;
+      background: #e8f1ff;
+    }
+    
+    #permission-notification { 
+        display: none; 
+        padding: 12px;
+        background-color: #f8d7da;
+        color: #721c24;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 1px solid #f5c6cb;
+    }
+
+    #request-permission-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 5px;
+        border: 1px solid #721c24;
+        cursor: pointer;
+        background: transparent;
+        color: #721c24;
+        margin-top: 10px;
+    }
+
+    #install-container {
+        margin-top: 8px;
+        padding: 10px;
+        background-color: #e7f3ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    #install-button {
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+        margin-top: 5px;
+    }
+
+    @media (min-width: 768px) {
+      .app {
+        margin: 16px auto;
+        height: calc(100vh - 32px);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+    }

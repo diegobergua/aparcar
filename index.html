@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dónde he aparcado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 600px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Parte superior (mapa) */
+    .app__top {
+      flex: 2;
+      min-height: 40vh;
+      border-bottom: 1px solid #ddd;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Parte central (botón) */
+    .app__middle {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #fafafa;
+    }
+
+    #saveBtn {
+      padding: 12px 16px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      width: 100%;
+    }
+
+    #saveBtn:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .message {
+      font-size: 13px;
+      margin: 0;
+      min-height: 1.2em;
+    }
+
+    .message--error {
+      color: #b00020;
+    }
+
+    .message--info {
+      color: #006400;
+    }
+
+    /* Parte inferior (histórico) */
+    .app__bottom {
+      flex: 1;
+      padding: 10px 14px;
+      overflow-y: auto;
+      background: #fff;
+    }
+
+    .app__bottom h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    #locationsList {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .location-item {
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: #fafafa;
+    }
+
+    .location-item:hover {
+      background: #f0f0f0;
+    }
+
+    .location-item__title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .location-item__meta {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .tag {
+      padding: 2px 6px;
+      font-size: 10px;
+      border-radius: 999px;
+      border: 1px solid #007bff;
+      color: #007bff;
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+
+    .location-item--active {
+      border-color: #007bff;
+      background: #e8f1ff;
+    }
+    
+    #permission-notification { 
+        display: none; 
+        padding: 12px;
+        background-color: #f8d7da;
+        color: #721c24;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 1px solid #f5c6cb;
+    }
+
+    #request-permission-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 5px;
+        border: 1px solid #721c24;
+        cursor: pointer;
+        background: transparent;
+        color: #721c24;
+        margin-top: 10px;
+    }
+
+    #install-container {
+        margin-top: 8px;
+        padding: 10px;
+        background-color: #e7f3ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    #install-button {
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+        margin-top: 5px;
+    }
+
+    @media (min-width: 768px) {
+      .app {
+        margin: 16px auto;
+        height: calc(100vh - 32px);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div id="permission-notification">
+        <strong>Atención:</strong> Para usar esta aplicación, necesitas activar los permisos de ubicación.
+        <br>
+        <button id="request-permission-btn">Habilitar Permisos</button>
+    </div>
+
+    <!-- Parte superior: mapa -->
+    <header class="app__top">
+      <div id="map"></div>
+    </header>
+
+    <!-- Parte central: botón -->
+    <main class="app__middle">
+      <button id="saveBtn">Guardar ubicación de aparcamiento</button>
+      <p class="hint">
+        Consejo: activa la ubicación en tu móvil y concede permiso al navegador para que pueda guardar el sitio exacto.
+      </p>
+      <p id="message" class="message"></p>
+      <div id="install-container" style="display: none;">
+          <p style="margin: 0 0 5px;">¡Instala la app para un acceso más fácil!</p>
+          <button id="install-button">Instalar</button>
+      </div>
+    </main>
+
+    <!-- Parte inferior: histórico -->
+    <section class="app__bottom">
+      <h2>Histórico de ubicaciones</h2>
+      <ul id="locationsList"></ul>
+    </section>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    // --- PWA and Permissions Logic ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => console.log('Service Worker registered:', registration))
+          .catch(error => console.log('Service Worker registration failed:', error));
+      });
+    }
+
+    let deferredPrompt;
+    const installContainer = document.getElementById('install-container');
+    const installButton = document.getElementById('install-button');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installContainer.style.display = 'block';
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        deferredPrompt = null;
+        installContainer.style.display = 'none';
+      }
+    });
+
+    const permissionNotification = document.getElementById('permission-notification');
+    const requestPermissionBtn = document.getElementById('request-permission-btn');
+
+    requestPermissionBtn.addEventListener('click', () => {
+        // Re-trigger the location prompt by calling the function that centers the map
+        tryCenterMapOnCurrentPosition();
+    });
+
+
+    // --- Original Application Logic (with modifications) ---
+    const STORAGE_KEY = "parkingLocations";
+
+    let locations = [];
+    let map;
+    let currentMarker = null;
+
+    const DEFAULT_LOCATION = {
+      lat: 40.4168, // Madrid por defecto
+      lng: -3.7038
+    };
+
+    const messageEl = () => document.getElementById("message");
+    const locationsListEl = () => document.getElementById("locationsList");
+    const saveBtnEl = () => document.getElementById("saveBtn");
+
+    function showMessage(text, type = "info") {
+      const el = messageEl();
+      el.textContent = text || "";
+      el.className = "message";
+      if (type === "error") {
+        el.classList.add("message--error");
+      } else if (type === "info") {
+        el.classList.add("message--info");
+      }
+    }
+
+    function loadLocationsFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr;
+      } catch (e) {
+        console.error("Error leyendo localStorage", e);
+        showMessage("No se ha podido leer el histórico de ubicaciones.", "error");
+        return [];
+      }
+    }
+
+    function saveLocationsToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+      } catch (e) {
+        console.error("Error guardando en localStorage", e);
+        showMessage("No se han podido guardar las ubicaciones (¿espacio lleno?).", "error");
+      }
+    }
+
+    function initMap(initialLat, initialLng) {
+      map = L.map("map").setView([initialLat, initialLng], 16);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      // Arreglo pequeño para que el mapa calcule bien el tamaño inicial
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+    }
+
+    function updateMapToLocation(location) {
+      if (!map) return;
+      const { lat, lng } = location;
+
+      map.setView([lat, lng], 17);
+
+      if (!currentMarker) {
+        currentMarker = L.marker([lat, lng]).addTo(map);
+      } else {
+        currentMarker.setLatLng([lat, lng]);
+      }
+    }
+
+    function renderLocationList(activeId = null) {
+      const list = locationsListEl();
+      list.innerHTML = "";
+
+      if (!locations.length) {
+        const li = document.createElement("li");
+        li.textContent = "No hay ubicaciones guardadas todavía.";
+        li.style.fontSize = "13px";
+        li.style.color = "#666";
+        list.appendChild(li);
+        return;
+      }
+
+      // Ordenar de más reciente a más antigua: timestamp descendente
+      const sorted = [...locations].sort((a, b) => b.timestamp - a.timestamp);
+      const latestId = sorted[0]?.id;
+
+      sorted.forEach((loc, index) => {
+        const li = document.createElement("li");
+        li.className = "location-item";
+        if (activeId && activeId === loc.id) {
+          li.classList.add("location-item--active");
+        } else if (!activeId && index === 0) {
+          // Por defecto, marcar la más reciente como activa
+          li.classList.add("location-item--active");
+        }
+
+        const title = document.createElement("div");
+        title.className = "location-item__title";
+        title.textContent = `Ubicación #${index + 1}`;
+
+        if (loc.id === latestId) {
+          const tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = "Actual";
+          title.appendChild(tag);
+        }
+
+        const date = new Date(loc.timestamp);
+        const meta = document.createElement("div");
+        meta.className = "location-item__meta";
+        meta.textContent = `${date.toLocaleString()} · Lat: ${loc.lat.toFixed(6)}, Lng: ${loc.lng.toFixed(6)}`;
+
+        li.appendChild(title);
+        li.appendChild(meta);
+
+        li.addEventListener("click", () => {
+          updateMapToLocation(loc);
+          highlightActiveItem(loc.id);
+        });
+
+        list.appendChild(li);
+      });
+    }
+
+    function highlightActiveItem(id) {
+      const list = locationsListEl();
+      const items = list.querySelectorAll(".location-item");
+      items.forEach((item, index) => {
+        item.classList.remove("location-item--active");
+      });
+
+      // Volvemos a marcar el que toca según el orden actual
+      const sorted = [...locations].sort((a, b) => b.timestamp - a.timestamp);
+      sorted.forEach((loc, index) => {
+        if (loc.id === id) {
+          const item = items[index];
+          if (item) {
+            item.classList.add("location-item--active");
+          }
+        }
+      });
+    }
+
+    function requestCurrentPositionForSave() {
+      const btn = saveBtnEl();
+
+      if (!("geolocation" in navigator)) {
+        showMessage("Tu navegador no soporta geolocalización.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = "Guardando ubicación...";
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          permissionNotification.style.display = 'none';
+          const { latitude, longitude } = pos.coords;
+          const now = Date.now();
+
+          const newLocation = {
+            id: now,
+            lat: latitude,
+            lng: longitude,
+            timestamp: now
+          };
+
+          locations.push(newLocation);
+          saveLocationsToStorage();
+          updateMapToLocation(newLocation);
+          renderLocationList(newLocation.id);
+          showMessage("Ubicación de aparcamiento guardada correctamente.", "info");
+
+          btn.disabled = false;
+          btn.textContent = originalText;
+        },
+        (err) => {
+          console.error("Error de geolocalización", err);
+          if (err.code === err.PERMISSION_DENIED) {
+              permissionNotification.style.display = 'block';
+              showMessage("Permiso de ubicación denegado. La app no puede funcionar sin él.", "error");
+          } else {
+              showMessage("No se ha podido obtener tu ubicación. Revisa los permisos.", "error");
+          }
+          btn.disabled = false;
+          btn.textContent = originalText;
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    function tryCenterMapOnCurrentPosition() {
+      if (!("geolocation" in navigator)) {
+        showMessage("La geolocalización no está disponible en este dispositivo.", "error");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          permissionNotification.style.display = 'none';
+          const { latitude, longitude } = pos.coords;
+          updateMapToLocation({ lat: latitude, lng: longitude });
+          showMessage("Mapa centrado en tu ubicación actual (no guardada todavía).", "info");
+        },
+        (err) => {
+          console.warn("No se ha podido centrar en la ubicación actual", err);
+          if (err.code === err.PERMISSION_DENIED) {
+              permissionNotification.style.display = 'block';
+              showMessage("Permiso de ubicación denegado. No se puede mostrar tu posición.", "error");
+          } else {
+              showMessage("No se ha podido obtener tu ubicación inicial.", "error");
+          }
+        }
+      );
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Cargar histórico
+      locations = loadLocationsFromStorage();
+
+      let initialLat = DEFAULT_LOCATION.lat;
+      let initialLng = DEFAULT_LOCATION.lng;
+
+      if (locations.length) {
+        // La última ubicación guardada se considera la actual
+        const lastLocation = locations[locations.length - 1];
+        initialLat = lastLocation.lat;
+        initialLng = lastLocation.lng;
+      }
+
+      // Inicializar mapa
+      initMap(initialLat, initialLng);
+
+      if (locations.length) {
+        const lastLocation = locations[locations.length - 1];
+        updateMapToLocation(lastLocation);
+        showMessage("Mapa centrado en la última ubicación guardada.", "info");
+      } else {
+        // Si no hay nada guardado, intentar centrar en la posición actual del usuario (sin guardar)
+        tryCenterMapOnCurrentPosition();
+      }
+
+      // Renderizar lista inicial
+      renderLocationList();
+
+      // Configurar botón
+      saveBtnEl().addEventListener("click", requestCurrentPositionForSave);
+    });
+  </script>
+</body>
+</html>
